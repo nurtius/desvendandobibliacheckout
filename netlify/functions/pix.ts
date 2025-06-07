@@ -9,9 +9,14 @@ const handler: Handler = async (event) => {
   }
 
   try {
-    const { value, name, email, phone, cpf } = JSON.parse(event.body || "{}");
+    const {
+  value,
+  payer_name: name,
+  payer_email: email,
+  payer_phone: phone,
+  payer_document: cpf,
+} = JSON.parse(event.body || "{}");
 
-    console.log("🟡 Dados recebidos:", { value, name, email, phone, cpf });
 
     // ✅ Validação mínima antes de chamar a API
     if (!value || !name || !email || !phone || !cpf) {
