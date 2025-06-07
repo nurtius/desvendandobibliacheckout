@@ -9,57 +9,49 @@ const handler: Handler = async (event) => {
   }
 
   try {
-    const {
-      value,
-      payer_name: name,
-      payer_email: email,
-      payer_phone: phone,
-      payer_document: cpf,
-    } = JSON.parse(event.body || "{}");
+    const { value } = JSON.parse(event.body || "{}");
 
-    console.log("🟡 Dados recebidos:", { value, name, email, phone, cpf });
+    console.log("🟡 Valor recebido:", value);
 
-    if (!value || !name || !email || !phone || !cpf) {
-      console.error("⚠️ Campos obrigatórios faltando");
+    if (!value) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ success: false, message: "Preencha todos os campos obrigatórios." }),
+        body: JSON.stringify({ success: false, message: "Valor é obrigatório" }),
       };
     }
 
     const token = process.env.PUSHINPAY_TOKEN;
     if (!token) {
-      console.error("❌ Token da PushInPay ausente");
       return {
         statusCode: 500,
-        body: JSON.stringify({ success: false, message: "Token da API não encontrado" }),
+        body: JSON.stringify({ success: false, message: "Token não encontrado" }),
       };
     }
 
     const endpoint = "https://api.pushinpay.com.br/api/pix/cashIn";
-console.log("🌐 Endpoint chamado:", endpoint);
+    console.log("🌐 Chamando endpoint:", endpoint);
 
     const response = await fetch(endpoint, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify({
-    value,
-    webhook_url: "https://checkout.desvendandoabiblia.shop/api/webhook/pushinpay",
-    split_rules: [],
-  }),
-});
-
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        value,
+        webhook_url: "https://checkout.desvendandoabiblia.shop/api/webhook/pushinpay",
+        split_rules: [],
+      }),
+    });
 
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
       const text = await response.text();
-      console.error("🚨 Resposta não é JSON:", text);
+      console.error("❌ Resposta não é JSON:", text);
       return {
         statusCode: 500,
-        body: JSON.stringify({ success: false, message: "Resposta inválida da API", contentType }),
+        body: JSON.stringify({ success: false, message: "Resposta inválida da API" }),
       };
     }
 
@@ -67,7 +59,6 @@ console.log("🌐 Endpoint chamado:", endpoint);
     console.log("🔵 Resposta da PushInPay:", result);
 
     if (!response.ok) {
-      console.error("🛑 Erro da PushInPay:", result);
       return {
         statusCode: 500,
         body: JSON.stringify({ success: false, result }),
