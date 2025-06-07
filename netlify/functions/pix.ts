@@ -10,15 +10,15 @@ const handler: Handler = async (event) => {
 
   try {
     const {
-  value,
-  payer_name: name,
-  payer_email: email,
-  payer_phone: phone,
-  payer_document: cpf,
-} = JSON.parse(event.body || "{}");
+      value,
+      payer_name: name,
+      payer_email: email,
+      payer_phone: phone,
+      payer_document: cpf,
+    } = JSON.parse(event.body || "{}");
 
+    console.log("🟡 Dados recebidos:", { value, name, email, phone, cpf });
 
-    // ✅ Validação mínima antes de chamar a API
     if (!value || !name || !email || !phone || !cpf) {
       console.error("⚠️ Campos obrigatórios faltando");
       return {
@@ -36,7 +36,9 @@ const handler: Handler = async (event) => {
       };
     }
 
-    const response = await fetch("https://api.pushinpay.com.br/pix", {
+    const endpoint = "https://api.pushinpay.com.br/api/pix";
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -53,8 +55,17 @@ const handler: Handler = async (event) => {
       }),
     });
 
-    const result = await response.json();
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await response.text();
+      console.error("🚨 Resposta não é JSON:", text);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ success: false, message: "Resposta inválida da API", contentType }),
+      };
+    }
 
+    const result = await response.json();
     console.log("🔵 Resposta da PushInPay:", result);
 
     if (!response.ok) {
