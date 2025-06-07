@@ -19,7 +19,10 @@ export async function GET(request: NextRequest) {
     console.log("Consultando pagamento:", paymentId)
 
     // Consultar status do pagamento na PushInPay com a URL CORRETA
-    const response = await fetch(`https://api.pushinpay.com.br/v1/payment/${paymentId}`, {
+    const apiUrl = `https://api.pushinpay.com.br/api/v1/pix/${paymentId}`
+    console.log("Consultando API:", apiUrl)
+
+    const response = await fetch(apiUrl, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,

@@ -10,23 +10,15 @@ interface PaymentRequest {
   description?: string
 }
 
-interface PushInPayResponse {
-  success: boolean
-  data?: {
-    id: string
-    qr_code: string
-    qr_code_url: string
-    pix_code: string
-    expires_at: string
-    status: string
-  }
-  error?: string
-  message?: string
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body: PaymentRequest = await request.json()
+
+    // Log para debug
+    console.log("=== CRIANDO PAGAMENTO ===")
+    console.log("Dados recebidos:", body)
+    console.log("Token existe:", !!process.env.PUSHINPAY_TOKEN)
+    console.log("========================")
 
     // Validar dados obrigatórios
     if (!body.value || !body.payer_name || !body.payer_email || !body.reference) {
@@ -36,19 +28,23 @@ export async function POST(request: NextRequest) {
     // Verificar se o token existe
     const token = process.env.PUSHINPAY_TOKEN
     if (!token) {
-      console.error("Token PushInPay não configurado")
-      return NextResponse.json({ success: false, error: "Configuração de pagamento não encontrada" }, { status: 500 })
+      console.error("❌ Token PushInPay não configurado")
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Token PushInPay não configurado. Verifique o arquivo .env.local",
+        },
+        { status: 500 },
+      )
     }
 
-    console.log("Criando pagamento PushInPay:", {
-      value: body.value,
-      payer_name: body.payer_name,
-      payer_email: body.payer_email,
-      reference: body.reference,
-    })
+    console.log("✅ Token encontrado, criando pagamento...")
 
-    // Chamar API da PushInPay com a URL CORRETA
-    const response = await fetch("https://api.pushinpay.com.br/v1/payment", {
+    // URL CORRETA da API da PushInPay (externa)
+    const apiUrl = "https://api.pushinpay.com.br/api/v1/pix"
+    console.log("Chamando API externa:", apiUrl)
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -70,14 +66,14 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json()
 
-    console.log("Resposta PushInPay:", {
+    console.log("Resposta da PushInPay:", {
       status: response.status,
       success: response.ok,
       data: data,
     })
 
     if (!response.ok) {
-      console.error("Erro da PushInPay:", data)
+      console.error("❌ Erro da PushInPay:", data)
       return NextResponse.json(
         {
           success: false,
@@ -88,7 +84,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Retornar dados do PIX com mapeamento correto
+    // Retornar dados do PIX formatados
     return NextResponse.json({
       success: true,
       data: {
@@ -101,7 +97,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Erro interno:", error)
+    console.error("❌ Erro interno:", error)
     return NextResponse.json(
       {
         success: false,
