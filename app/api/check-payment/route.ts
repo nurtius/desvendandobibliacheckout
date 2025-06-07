@@ -9,11 +9,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "ID do pagamento não fornecido" }, { status: 400 })
     }
 
-    // Consultar status do pagamento na PushInPay
-    const response = await fetch(`https://api.pushinpay.com/v1/payment/${paymentId}`, {
+    // Verificar se o token existe
+    const token = process.env.PUSHINPAY_TOKEN
+    if (!token) {
+      console.error("Token PushInPay não configurado")
+      return NextResponse.json({ success: false, error: "Configuração de pagamento não encontrada" }, { status: 500 })
+    }
+
+    console.log("Consultando pagamento:", paymentId)
+
+    // Consultar status do pagamento na PushInPay com a URL correta
+    const response = await fetch(`https://api.pushinpay.com.br/api/pix/${paymentId}`, {
       method: "GET",
       headers: {
-        Authorization: "Bearer 32749|OW7JYt7IQyUjJgcz6u17QV45V5MqDygrx4xCVEa4df88455b",
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
@@ -21,12 +30,18 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json()
 
+    console.log("Status do pagamento:", {
+      paymentId,
+      status: response.status,
+      data: data,
+    })
+
     if (!response.ok) {
       console.error("Erro ao consultar pagamento:", data)
       return NextResponse.json(
         {
           success: false,
-          error: data.message || "Erro ao consultar pagamento",
+          error: data.message || data.error || "Erro ao consultar pagamento",
         },
         { status: response.status },
       )
@@ -35,10 +50,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        id: data.id,
+        id: data.id || data.payment_id,
         status: data.status,
-        paid_at: data.paid_at,
-        expires_at: data.expires_at,
+        paid_at: data.paid_at || data.payment_date,
+        expires_at: data.expires_at || data.expiration_date,
       },
     })
   } catch (error) {

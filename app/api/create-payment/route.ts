@@ -33,11 +33,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Dados obrigatórios não fornecidos" }, { status: 400 })
     }
 
-    // Chamar API da PushInPay
-    const response = await fetch("https://api.pushinpay.com/v1/payment", {
+    // Verificar se o token existe
+    const token = process.env.PUSHINPAY_TOKEN
+    if (!token) {
+      console.error("Token PushInPay não configurado")
+      return NextResponse.json({ success: false, error: "Configuração de pagamento não encontrada" }, { status: 500 })
+    }
+
+    console.log("Criando pagamento PushInPay:", {
+      value: body.value,
+      payer_name: body.payer_name,
+      payer_email: body.payer_email,
+      reference: body.reference,
+    })
+
+    // Chamar API da PushInPay com a URL correta
+    const response = await fetch("https://api.pushinpay.com.br/api/pix", {
       method: "POST",
       headers: {
-        Authorization: "Bearer 32749|OW7JYt7IQyUjJgcz6u17QV45V5MqDygrx4xCVEa4df88455b",
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
@@ -56,12 +70,18 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json()
 
+    console.log("Resposta PushInPay:", {
+      status: response.status,
+      success: response.ok,
+      data: data,
+    })
+
     if (!response.ok) {
       console.error("Erro da PushInPay:", data)
       return NextResponse.json(
         {
           success: false,
-          error: data.message || "Erro ao gerar PIX",
+          error: data.message || data.error || "Erro ao gerar PIX",
           details: data,
         },
         { status: response.status },
@@ -72,12 +92,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        id: data.id,
-        qr_code: data.qr_code,
-        qr_code_url: data.qr_code_url,
+        id: data.id || data.payment_id,
+        qr_code: data.qr_code || data.pix_code,
+        qr_code_url: data.qr_code_url || data.qr_code_image,
         pix_code: data.pix_code || data.qr_code,
-        expires_at: data.expires_at,
-        status: data.status,
+        expires_at: data.expires_at || data.expiration_date,
+        status: data.status || "pending",
       },
     })
   } catch (error) {
