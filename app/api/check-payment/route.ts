@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
 
     console.log("Consultando pagamento:", paymentId)
 
-    // Consultar status do pagamento na PushInPay com a URL correta
-    const response = await fetch(`https://api.pushinpay.com.br/api/pix/${paymentId}`, {
+    // Consultar status do pagamento na PushInPay com a URL CORRETA
+    const response = await fetch(`https://api.pushinpay.com.br/v1/payment/${paymentId}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -50,10 +50,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        id: data.id || data.payment_id,
-        status: data.status,
-        paid_at: data.paid_at || data.payment_date,
-        expires_at: data.expires_at || data.expiration_date,
+        id: data.id || data.payment_id || data.data?.id,
+        status: data.status || data.data?.status,
+        paid_at: data.paid_at || data.payment_date || data.data?.paid_at,
+        expires_at: data.expires_at || data.expiration_date || data.data?.expires_at,
       },
     })
   } catch (error) {

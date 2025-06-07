@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
       reference: body.reference,
     })
 
-    // Chamar API da PushInPay com a URL correta
-    const response = await fetch("https://api.pushinpay.com.br/api/pix", {
+    // Chamar API da PushInPay com a URL CORRETA
+    const response = await fetch("https://api.pushinpay.com.br/v1/payment", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -88,16 +88,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Retornar dados do PIX
+    // Retornar dados do PIX com mapeamento correto
     return NextResponse.json({
       success: true,
       data: {
-        id: data.id || data.payment_id,
-        qr_code: data.qr_code || data.pix_code,
-        qr_code_url: data.qr_code_url || data.qr_code_image,
-        pix_code: data.pix_code || data.qr_code,
-        expires_at: data.expires_at || data.expiration_date,
-        status: data.status || "pending",
+        id: data.id || data.payment_id || data.data?.id,
+        qr_code: data.qr_code || data.pix_code || data.data?.qr_code,
+        qr_code_url: data.qr_code_url || data.qr_code_image || data.data?.qr_code_url,
+        pix_code: data.pix_code || data.qr_code || data.data?.pix_code,
+        expires_at: data.expires_at || data.expiration_date || data.data?.expires_at,
+        status: data.status || data.data?.status || "pending",
       },
     })
   } catch (error) {
