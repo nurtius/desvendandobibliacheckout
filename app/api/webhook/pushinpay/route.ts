@@ -1,42 +1,44 @@
-// app/api/webhook/pushinpay/route.ts
-
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const contentType = req.headers.get("content-type") || ""
+    let data: any
 
-    console.log("📦 Corpo recebido:", body);
-
-    // Verificações básicas de segurança
-    if (!body || typeof body !== "object") {
-      console.error("❌ Webhook sem corpo ou formato inválido");
-      return NextResponse.json({ success: false, error: "Corpo inválido" }, { status: 400 });
+    if (contentType.includes("application/json")) {
+      data = await req.json()
+    } else if (contentType.includes("application/x-www-form-urlencoded")) {
+      const text = await req.text()
+      data = Object.fromEntries(new URLSearchParams(text))
+    } else {
+      console.warn("⚠️ Tipo de conteúdo não suportado:", contentType)
+      return NextResponse.json({ success: false, error: "Unsupported content-type" }, { status: 415 })
     }
 
-    const status = body.status;
-    const value = body.value;
+    console.log("📥 Webhook recebido:", JSON.stringify(data, null, 2))
 
-    console.log("📊 Dados extraídos:", { status, value });
+    const status = data.status
+    const valor = parseInt(data.value)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
 
-    if (!status || !value) {
-      console.error("❌ Campos obrigatórios ausentes");
-      return NextResponse.json({ success: false, error: "Campos obrigatórios ausentes" }, { status: 400 });
+    if (!baseUrl) {
+      console.error("❌ NEXT_PUBLIC_BASE_URL não está definido.")
+      return NextResponse.json({ success: false, error: "BASE_URL ausente" }, { status: 500 })
     }
 
     if (status === "paid") {
-      const redirectTo = value === 1000 ? "/upsell" : "/obrigado";
+      const valoresProdutoPrincipal = [1000, 1690, 2380, 3070, 3760, 4450, 5140]
+      const redirecionarPara = valoresProdutoPrincipal.includes(valor) ? "/upsell" : "/obrigado"
 
-      console.log("🔁 Redirecionando para:", redirectTo);
-
-      return NextResponse.redirect(new URL(redirectTo, process.env.NEXT_PUBLIC_BASE_URL), 302);
+      console.log("✅ Pagamento aprovado. Redirecionando para:", redirecionarPara)
+      return NextResponse.redirect(`${baseUrl}${redirecionarPara}`, 303)
     }
 
-    console.warn("⚠️ Status diferente de 'paid':", status);
-    return NextResponse.json({ success: false, error: "Pagamento não aprovado" }, { status: 400 });
+    console.warn("⚠️ Status diferente de 'paid':", status)
+    return NextResponse.json({ success: false, error: "Status não pago" }, { status: 200 })
 
-  } catch (error: any) {
-    console.error("🔥 Erro inesperado ao processar webhook:", error);
-    return NextResponse.json({ success: false, error: "Erro ao processar webhook" }, { status: 500 });
+  } catch (error) {
+    console.error("🔥 Erro inesperado ao processar webhook:", error)
+    return NextResponse.json({ success: false, error: "Erro ao processar webhook" }, { status: 500 })
   }
 }
