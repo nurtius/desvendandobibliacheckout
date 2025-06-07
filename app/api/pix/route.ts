@@ -35,11 +35,13 @@ export async function POST(req: Request) {
     const result = await response.json();
 
     if (!response.ok) {
-      return NextResponse.json(
-        { success: false, message: "Erro na criação do pagamento", result },
-        { status: 500 }
-      );
-    }
+  console.error("🧨 Erro retornado pela PushInPay:", result)
+  return NextResponse.json(
+    { success: false, message: "Erro na criação do pagamento", result },
+    { status: 500 }
+  );
+}
+
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
