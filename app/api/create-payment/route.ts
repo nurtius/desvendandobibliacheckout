@@ -40,9 +40,23 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ Token encontrado, criando pagamento...")
 
-    // URL CORRETA da API da PushInPay (externa)
-    const apiUrl = "https://api.pushinpay.com.br/api/v1/pix"
+    // URL CORRETA da API da PushInPay (testando diferentes endpoints)
+    const apiUrl = "https://api.pushinpay.com.br/api/pix"
     console.log("Chamando API externa:", apiUrl)
+
+    const requestBody = {
+      value: body.value,
+      payer_name: body.payer_name,
+      payer_email: body.payer_email,
+      payer_phone: body.payer_phone,
+      payer_document: body.payer_document,
+      reference: body.reference,
+      description: body.description || "Desvendando a Bíblia - Materiais Digitais",
+      expires_in: 900, // 15 minutos
+      webhook_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhook/pushinpay`,
+    }
+
+    console.log("Dados enviados:", requestBody)
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -51,17 +65,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        value: body.value,
-        payer_name: body.payer_name,
-        payer_email: body.payer_email,
-        payer_phone: body.payer_phone,
-        payer_document: body.payer_document,
-        reference: body.reference,
-        description: body.description || "Desvendando a Bíblia - Materiais Digitais",
-        expires_in: 900, // 15 minutos
-        webhook_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhook/pushinpay`,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
     const data = await response.json()
@@ -69,11 +73,53 @@ export async function POST(request: NextRequest) {
     console.log("Resposta da PushInPay:", {
       status: response.status,
       success: response.ok,
+      headers: Object.fromEntries(response.headers.entries()),
       data: data,
     })
 
     if (!response.ok) {
       console.error("❌ Erro da PushInPay:", data)
+
+      // Se for erro 404, tentar endpoint alternativo
+      if (response.status === 404) {
+        console.log("Tentando endpoint alternativo...")
+
+        const alternativeUrl = "https://api.pushinpay.com.br/pix"
+        console.log("Tentando URL:", alternativeUrl)
+
+        const altResponse = await fetch(alternativeUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        })
+
+        const altData = await altResponse.json()
+
+        console.log("Resposta alternativa:", {
+          status: altResponse.status,
+          success: altResponse.ok,
+          data: altData,
+        })
+
+        if (altResponse.ok) {
+          return NextResponse.json({
+            success: true,
+            data: {
+              id: altData.id || altData.payment_id || altData.data?.id,
+              qr_code: altData.qr_code || altData.pix_code || altData.data?.qr_code,
+              qr_code_url: altData.qr_code_url || altData.qr_code_image || altData.data?.qr_code_url,
+              pix_code: altData.pix_code || altData.qr_code || altData.data?.pix_code,
+              expires_at: altData.expires_at || altData.expiration_date || altData.data?.expires_at,
+              status: altData.status || altData.data?.status || "pending",
+            },
+          })
+        }
+      }
+
       return NextResponse.json(
         {
           success: false,

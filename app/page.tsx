@@ -236,8 +236,8 @@ export default function Checkout() {
         description: `Desvendando a Bíblia - ${orderBumps.filter((b) => b.selected).length > 0 ? "Produto Principal + " + orderBumps.filter((b) => b.selected).length + " Bônus" : "Produto Principal"}`,
       }
 
-      // Chamar API para criar pagamento
-      const response = await fetch("/api/create-payment", {
+      // Chamar API para criar pagamento (AGORA USANDO /api/pix)
+      const response = await fetch("/api/pix", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
