@@ -247,6 +247,11 @@ export default function Checkout() {
 
       const result = await response.json()
 
+// Salvar o ID da transação no localStorage para usar na verificação
+if (typeof window !== "undefined") {
+  localStorage.setItem("transaction_id", result.id)
+}
+
       if (!result.success) {
         throw new Error(result.error || "Erro ao gerar PIX")
       }
