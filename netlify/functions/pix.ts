@@ -36,7 +36,8 @@ const handler: Handler = async (event) => {
       };
     }
 
-    const endpoint = "https://api.pushinpay.com.br/api/pix";
+    const endpoint = "https://api.pushinpay.com.br/pix";
+console.log("🌐 Endpoint chamado:", endpoint);
 
     const response = await fetch(endpoint, {
       method: "POST",
