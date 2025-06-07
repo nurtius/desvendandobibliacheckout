@@ -36,25 +36,22 @@ const handler: Handler = async (event) => {
       };
     }
 
-    const endpoint = "https://api.pushinpay.com.br/pix";
+    const endpoint = "https://api.pushinpay.com.br/api/pix/cashIn";
 console.log("🌐 Endpoint chamado:", endpoint);
 
     const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        value,
-        payer_name: name,
-        payer_document: cpf,
-        payer_email: email,
-        payer_phone: phone,
-        description: "Desvendando a Bíblia",
-        reference: `pedido-${Date.now()}`,
-      }),
-    });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    value,
+    webhook_url: "https://checkout.desvendandoabiblia.shop/api/webhook/pushinpay",
+    split_rules: [],
+  }),
+});
+
 
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
