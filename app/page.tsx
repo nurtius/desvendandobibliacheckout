@@ -227,7 +227,7 @@ export default function Checkout() {
 
       // Preparar dados para a API
       const paymentData = {
-        value: calculateTotal(),
+        value: Math.round(calculateTotal() * 100),
         payer_name: nome,
         payer_email: email,
         payer_phone: telefone.replace(/\D/g, ""),

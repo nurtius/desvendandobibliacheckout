@@ -10,15 +10,18 @@ const handler: Handler = async (event) => {
 
   try {
     const { value } = JSON.parse(event.body || "{}");
+console.log("🟡 Valor recebido:", value);
 
-    console.log("🟡 Valor recebido:", value);
-
-    if (!value) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ success: false, message: "Valor é obrigatório" }),
-      };
-    }
+// ⚠️ Validação: valor mínimo de 50 centavos
+if (!value || typeof value !== "number" || value < 50) {
+  return {
+    statusCode: 400,
+    body: JSON.stringify({
+      success: false,
+      message: "O valor mínimo permitido é de R$ 0,50 (value >= 50 centavos).",
+    }),
+  };
+}
 
     const token = process.env.PUSHINPAY_TOKEN;
     if (!token) {
