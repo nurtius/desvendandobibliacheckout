@@ -11,6 +11,8 @@ interface OrderData {
   email: string
   total: number
   orderId: string
+  isUpsell?: boolean
+  upsellPrice?: number
 }
 
 export default function Sucesso() {
@@ -22,7 +24,7 @@ export default function Sucesso() {
       const data = JSON.parse(savedOrderData)
       setOrderData(data)
 
-      // Limpar dados do localStorage após sucesso
+      // Clear data from localStorage after success
       localStorage.removeItem("orderData")
     }
   }, [])
@@ -45,9 +47,13 @@ export default function Sucesso() {
           <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Pagamento Aprovado!</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            {orderData.isUpsell ? "Compra Completa!" : "Pagamento Aprovado!"}
+          </h1>
           <p className="text-gray-600">
-            Obrigado pela sua compra, {orderData.nome}! Seu pedido foi processado com sucesso.
+            {orderData.isUpsell
+              ? `Parabéns, ${orderData.nome}! Você adquiriu o produto principal E o curso completo!`
+              : `Obrigado pela sua compra, ${orderData.nome}! Seu pedido foi processado com sucesso.`}
           </p>
         </div>
 
@@ -73,6 +79,17 @@ export default function Sucesso() {
                 })}
               </span>
             </div>
+            {orderData.isUpsell && orderData.upsellPrice && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Valor total pago:</span>
+                <span className="font-bold text-green-600">
+                  {(orderData.total + orderData.upsellPrice).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

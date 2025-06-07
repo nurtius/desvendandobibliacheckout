@@ -236,8 +236,8 @@ export default function Checkout() {
         description: `Desvendando a Bíblia - ${orderBumps.filter((b) => b.selected).length > 0 ? "Produto Principal + " + orderBumps.filter((b) => b.selected).length + " Bônus" : "Produto Principal"}`,
       }
 
-      // Chamar API para criar pagamento (AGORA USANDO /api/pix)
-      const response = await fetch("/api/pix", {
+      // Chamar API para criar pagamento
+      const response = await fetch("/api/create-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -257,19 +257,19 @@ export default function Checkout() {
 
       // Preparar dados do pedido para salvar
       const orderData = {
-  nome,
-  email,
-  telefone,
-  cpf,
-  total: calculateTotal(),
-  orderBumps: orderBumps.filter((bump) => bump.selected),
-  orderId,
-  paymentId: result.data.id,
-  qrCode: result.data.qr_code, // <- copia e cola do Pix (estava certo)
-  qrCodeUrl: result.data.qr_code_base64, // <- imagem do QR code (corrigido aqui!)
-  expiresAt: result.data.expires_at,
-  status: result.data.status,
-}
+        nome,
+        email,
+        telefone,
+        cpf,
+        total: calculateTotal(),
+        orderBumps: orderBumps.filter((bump) => bump.selected),
+        orderId,
+        paymentId: result.data.id,
+        qrCode: result.data.qr_code, // <- copia e cola do Pix (estava certo)
+        qrCodeUrl: result.data.qr_code_base64, // <- imagem do QR code (corrigido aqui!)
+        expiresAt: result.data.expires_at,
+        status: result.data.status,
+      }
 
       // Salvar dados no localStorage
       localStorage.setItem("orderData", JSON.stringify(orderData))

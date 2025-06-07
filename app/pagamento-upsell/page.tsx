@@ -13,20 +13,17 @@ interface OrderData {
   telefone: string
   cpf: string
   total: number
-  orderBumps: Array<{
-    id: string
-    title: string
-    price: number
-  }>
-  orderId: string
-  paymentId: string
-  qrCode: string
-  qrCodeUrl: string
-  expiresAt: string
-  status: string
+  isUpsell: boolean
+  upsellPrice: number
+  upsellOrderId: string
+  upsellPaymentId: string
+  upsellQrCode: string
+  upsellQrCodeUrl: string
+  upsellExpiresAt: string
+  upsellStatus: string
 }
 
-export default function PagamentoPix() {
+export default function PagamentoUpsell() {
   const [orderData, setOrderData] = useState<OrderData | null>(null)
   const [copyText, setCopyText] = useState("Copiar")
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "paid" | "expired">("pending")
@@ -52,15 +49,19 @@ export default function PagamentoPix() {
     const savedOrderData = localStorage.getItem("orderData")
     if (savedOrderData) {
       const data = JSON.parse(savedOrderData)
-      setOrderData(data)
+      if (data.isUpsell) {
+        setOrderData(data)
 
-      // Calcular tempo restante baseado na expiração real
-      const expiresAt = new Date(data.expiresAt).getTime()
-      const now = new Date().getTime()
-      const timeLeftSeconds = Math.max(0, Math.floor((expiresAt - now) / 1000))
-      setTimeLeft(timeLeftSeconds)
+        // Calcular tempo restante baseado na expiração real
+        const expiresAt = new Date(data.upsellExpiresAt).getTime()
+        const now = new Date().getTime()
+        const timeLeftSeconds = Math.max(0, Math.floor((expiresAt - now) / 1000))
+        setTimeLeft(timeLeftSeconds)
 
-      setIsLoading(false)
+        setIsLoading(false)
+      } else {
+        window.location.href = "/"
+      }
     } else {
       window.location.href = "/"
     }
@@ -78,33 +79,34 @@ export default function PagamentoPix() {
 
   // Verificar status do pagamento periodicamente
   useEffect(() => {
-    if (paymentStatus === "pending" && !isLoading && orderData?.paymentId) {
+    if (paymentStatus === "pending" && !isLoading && orderData?.upsellPaymentId) {
       const checkPayment = async () => {
         if (checkingPayment) return
 
         setCheckingPayment(true)
         try {
-          const response = await fetch(`/api/check-payment?id=${orderData.paymentId}`)
+          const response = await fetch(`/api/check-payment?id=${orderData.upsellPaymentId}`)
           const result = await response.json()
 
-          if (result.success && result.data.status === "paid") {
+          if (result.success && result.status === "paid") {
             setPaymentStatus("paid")
 
-            // Registrar conversão no Facebook Pixel
+            // Registrar conversão do upsell no Facebook Pixel
             if (typeof window !== "undefined" && (window as any).fbq) {
               ;(window as any).fbq("track", "Purchase", {
-                value: orderData.total,
+                value: orderData.upsellPrice,
                 currency: "BRL",
+                content_name: "Upsell - Curso Completo",
               })
             }
 
-            // Redirecionar para página de upsell após 2 segundos
+            // Redirecionar para página de sucesso após 2 segundos
             setTimeout(() => {
-              window.location.href = "/upsell"
+              window.location.href = "/sucesso"
             }, 2000)
           }
         } catch (error) {
-          console.error("Erro ao verificar pagamento:", error)
+          console.error("Erro ao verificar pagamento do upsell:", error)
         } finally {
           setCheckingPayment(false)
         }
@@ -121,17 +123,17 @@ export default function PagamentoPix() {
   }, [paymentStatus, isLoading, orderData, checkingPayment])
 
   const copyPix = async () => {
-    if (!orderData?.qrCode) return
+    if (!orderData?.upsellQrCode) return
 
     try {
-      await navigator.clipboard.writeText(orderData.qrCode)
+      await navigator.clipboard.writeText(orderData.upsellQrCode)
       setCopyText("Copiado!")
       setTimeout(() => setCopyText("Copiar"), 3000)
     } catch (error) {
       console.error("Erro ao copiar:", error)
       // Fallback para navegadores mais antigos
       const textArea = document.createElement("textarea")
-      textArea.value = orderData.qrCode
+      textArea.value = orderData.upsellQrCode
       document.body.appendChild(textArea)
       textArea.select()
       document.execCommand("copy")
@@ -147,26 +149,27 @@ export default function PagamentoPix() {
   }
 
   const handleConfirmPayment = async () => {
-    if (!orderData?.paymentId) return
+    if (!orderData?.upsellPaymentId) return
 
     setCheckingPayment(true)
     try {
-      const response = await fetch(`/api/check-payment?id=${orderData.paymentId}`)
+      const response = await fetch(`/api/check-payment?id=${orderData.upsellPaymentId}`)
       const result = await response.json()
 
-      if (result.success && result.data.status === "paid") {
+      if (result.success && result.status === "paid") {
         setPaymentStatus("paid")
 
-        // Registrar conversão no Facebook Pixel
+        // Registrar conversão do upsell no Facebook Pixel
         if (typeof window !== "undefined" && (window as any).fbq) {
           ;(window as any).fbq("track", "Purchase", {
-            value: orderData.total,
+            value: orderData.upsellPrice,
             currency: "BRL",
+            content_name: "Upsell - Curso Completo",
           })
         }
 
         setTimeout(() => {
-          window.location.href = "/upsell"
+          window.location.href = "/sucesso"
         }, 2000)
       } else {
         alert("Pagamento ainda não foi identificado. Aguarde alguns instantes e tente novamente.")
@@ -200,9 +203,12 @@ export default function PagamentoPix() {
                 <Clock className="h-20 w-20 mx-auto" />
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-3">PIX Expirado</h2>
-              <p className="text-gray-600 mb-8">O tempo para pagamento expirou. Gere um novo PIX para continuar.</p>
-              <Button onClick={handleNewPayment} className="w-full bg-green-600 hover:bg-green-700 py-3">
-                Gerar Novo PIX
+              <p className="text-gray-600 mb-8">O tempo para pagamento do upsell expirou.</p>
+              <Button
+                onClick={() => (window.location.href = "/sucesso")}
+                className="w-full bg-green-600 hover:bg-green-700 py-3"
+              >
+                Continuar para Finalização
               </Button>
             </CardContent>
           </Card>
@@ -221,9 +227,9 @@ export default function PagamentoPix() {
               <div className="text-green-500 mb-6">
                 <Check className="h-20 w-20 mx-auto" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-3">Pagamento Aprovado!</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-3">Upsell Aprovado!</h2>
               <p className="text-gray-600 mb-6">
-                Seu pagamento foi processado com sucesso. Você será redirecionado em instantes...
+                Seu pagamento do curso completo foi processado com sucesso. Você será redirecionado em instantes...
               </p>
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
             </CardContent>
@@ -239,8 +245,8 @@ export default function PagamentoPix() {
       <div className="max-w-md mx-auto p-4">
         {/* Header */}
         <div className="text-center py-6">
-          <h1 className="text-2xl font-bold text-white mb-2">Pague o Pix</h1>
-          <p className="text-white/90">Transação: {orderData.orderId}</p>
+          <h1 className="text-2xl font-bold text-white mb-2">Pague o Curso Completo</h1>
+          <p className="text-white/90">Upsell: {orderData.upsellOrderId}</p>
         </div>
 
         {/* Card Principal */}
@@ -249,7 +255,7 @@ export default function PagamentoPix() {
             {/* Saudação e Instruções */}
             <div className="mb-6">
               <h2 className="text-xl font-bold text-gray-800 mb-3">{orderData.nome},</h2>
-              <p className="text-gray-700 mb-4">Siga os passos abaixo para pagar:</p>
+              <p className="text-gray-700 mb-4">Finalize o pagamento do seu curso completo:</p>
 
               <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-3">
@@ -294,8 +300,8 @@ export default function PagamentoPix() {
             <div className="text-center mb-6">
               <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 inline-block">
                 <Image
-                  src={orderData.qrCodeUrl || "/placeholder.svg?height=200&width=200"}
-                  alt="QR Code PIX"
+                  src={orderData.upsellQrCodeUrl || "/placeholder.svg?height=200&width=200"}
+                  alt="QR Code PIX Upsell"
                   width={200}
                   height={200}
                   className="mx-auto"
@@ -314,7 +320,7 @@ export default function PagamentoPix() {
 
             {/* Código PIX */}
             <div className="bg-gray-50 p-3 rounded-lg mb-6 border">
-              <code className="text-xs break-all text-gray-700 font-mono block">{orderData.qrCode}</code>
+              <code className="text-xs break-all text-gray-700 font-mono block">{orderData.upsellQrCode}</code>
             </div>
 
             {/* Botão Confirmar */}
@@ -338,48 +344,30 @@ export default function PagamentoPix() {
           </CardContent>
         </Card>
 
-        {/* Itens da Compra */}
+        {/* Detalhes da Compra */}
         <Card className="shadow-lg">
           <CardContent className="p-4">
-            <h3 className="font-bold text-gray-800 mb-4">Itens da sua compra</h3>
+            <h3 className="font-bold text-gray-800 mb-4">Curso Completo</h3>
 
-            {/* Produto Principal */}
-            <div className="flex items-center gap-3 mb-4 p-3 bg-blue-600 text-white rounded-lg">
+            <div className="flex items-center gap-3 mb-4 p-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg">
               <Image
                 src="/images/produto-principal.png"
-                alt="Desvendando a Bíblia"
+                alt="Curso Completo"
                 width={60}
                 height={60}
                 className="rounded-md"
               />
               <div className="flex-grow">
-                <h4 className="font-bold text-sm">Desvendando a Bíblia + 4 Bônus</h4>
-                <p className="text-xs opacity-90">Aplicativo completo + materiais exclusivos</p>
+                <h4 className="font-bold text-sm">Desvendando a Bíblia - Curso Completo</h4>
+                <p className="text-xs opacity-90">12 módulos + 50 videoaulas + bônus exclusivos</p>
               </div>
             </div>
-
-            {/* Order Bumps Selecionados */}
-            {orderData.orderBumps.map((bump) => (
-              <div key={bump.id} className="flex items-center gap-3 mb-3 p-2 bg-gray-50 rounded-lg">
-                <Image
-                  src={`/images/order-bump-${bump.id}.png`}
-                  alt={bump.title}
-                  width={40}
-                  height={40}
-                  className="rounded-md"
-                />
-                <div className="flex-grow">
-                  <h4 className="font-semibold text-sm text-gray-800">{bump.title.split(":")[0]}</h4>
-                  <p className="text-xs text-gray-600">{formatCurrency(bump.price)}</p>
-                </div>
-              </div>
-            ))}
 
             {/* Total */}
             <div className="border-t pt-3 mt-4">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-gray-800">Total:</span>
-                <span className="font-bold text-lg text-green-600">{formatCurrency(orderData.total)}</span>
+                <span className="font-bold text-gray-800">Total do Upsell:</span>
+                <span className="font-bold text-lg text-green-600">{formatCurrency(orderData.upsellPrice)}</span>
               </div>
             </div>
           </CardContent>

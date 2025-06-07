@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Desvendando a Bíblia - Checkout",
   description: "Checkout seguro para o produto Desvendando a Bíblia",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
-        {/* Facebook Pixel Code */}
+        {/* Meta Pixel Code */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -45,7 +45,7 @@ export default function RootLayout({
             src="https://www.facebook.com/tr?id=708251728566527&ev=PageView&noscript=1"
           />
         </noscript>
-        {/* End Facebook Pixel Code */}
+        {/* End Meta Pixel Code */}
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
